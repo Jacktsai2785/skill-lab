@@ -3,7 +3,7 @@
 我（Jack）自己原創的 Claude Code skill 開發庫，與 `rivendell`（朋友的 repo）獨立。
 透過 `deploy.sh` symlink 進 `~/.claude/skills/`，所有專案全域可用。
 
-## Skills（17）
+## Skills（18）
 
 ### workflow/
 | Skill | 說明 |
@@ -22,6 +22,7 @@
 | `cross-project-docs-symlink-bridge` | 跨專案文件橋接到主知識庫 |
 | `personal-workspace` | Obsidian 風個人筆記庫結構 |
 | `personal-knowledge-wiki` | raw→inbox→wiki 三層知識庫工作流 |
+| `project-redteam-review` | 全專案盤點＋code↔文檔驗證＋三紅隊並行審查＋彙整最佳設計（可選套用） |
 
 ### meta/
 | Skill | 說明 |
