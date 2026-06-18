@@ -1,6 +1,6 @@
 ---
 name: project-redteam-review
-description: 對「整個專案」做深度盤點 + 紅隊審查 + 彙整最佳設計。先全面盤點 code 與文檔、做 code↔文檔一致性與事實查證建立事實基準、捕捉專案初衷，再並行派出三個不同視角的紅隊 subagent（不分工、同 scope）**同時審視技術健康與產品體驗**（workflow、UI/UX、貼近使用者初衷、human-friendly），各提批判與更好的設計，最後裁決衝突、彙整成報告，並**產出單一自包含的 HTML GUI**（雙欄 before/after、技術/體驗分類標籤、嚴重度色標、可折疊）自動開啟，再給使用者一個 redo 關卡決定是否重跑/換視角/深挖/套用。TRIGGER when 使用者說「徹底盤點整個專案」「全專案 code review」「紅隊審視」「從不同面向審視 code」「檢視 workflow / UI/UX 可優化處」「是否貼近使用者初衷」「彙整成最佳設計」「red team 這個專案」「whole project audit」。DO NOT TRIGGER when 使用者只要看目前 git diff / PR 的快速 review（用 /code-review）、只要重構單一大檔（用 large-file-refactor）、或只要去除文件 AI 味（用 de-slopify）。
+description: 對「整個專案」做深度盤點 + 紅隊審查 + 彙整最佳設計。先全面盤點 code 與文檔、做 code↔文檔一致性與事實查證建立事實基準、捕捉專案初衷，再並行派出三個不同視角的紅隊 subagent（不分工、同 scope）**同時審視技術健康與產品體驗**（workflow、UI/UX、貼近使用者初衷、human-friendly），各提批判與更好的設計，最後裁決衝突、彙整成報告，並**產出單一自包含的 HTML GUI**（雙欄 before/after、技術/體驗分類標籤、嚴重度色標、可折疊）自動開啟，最後一個套用關卡讓使用者選要把哪幾條高信心低風險建議真的套到 code。TRIGGER when 使用者說「徹底盤點整個專案」「全專案 code review」「紅隊審視」「從不同面向審視 code」「檢視 workflow / UI/UX 可優化處」「是否貼近使用者初衷」「彙整成最佳設計」「red team 這個專案」「whole project audit」。DO NOT TRIGGER when 使用者只要看目前 git diff / PR 的快速 review（用 /code-review）、只要重構單一大檔（用 large-file-refactor）、或只要去除文件 AI 味（用 de-slopify）。
 when_to_use: 想對一個專案做超越 diff 層級的深度體檢——盤點全部 code 與文檔、確認文檔與實作相符、用多個獨立視角找出可以做得更好的地方，並收斂成一份可執行的最佳設計。適合接手陌生專案、重大重構前、或階段性品質盤點。
 version: 1.0.0
 tags: [quality, review, audit, red-team, architecture]
@@ -68,24 +68,22 @@ allowed-tools:
 
 1. **合併去重**：把三隊發現按位置/主題歸併，相同問題只留一條，但記住「幾隊點到」當信心訊號（三隊都點到＝高信心）。技術健康與產品體驗的發現都要納入。
 2. **裁決衝突**：三隊給出對立建議時（典型：安全 vs 效能、抽象 vs 簡潔、功能完整 vs 簡潔體驗），明說取捨並給出傾向，不要含糊兩面討好。
-3. **寫結構化 JSON**：把彙整結果寫成 `<專案>/REDTEAM-REVIEW.json`，欄位見 [references/report-template.md](references/report-template.md) 的 JSON schema。**每個 before/after 的 before 必須是現況真實 code，after 是建議寫法**。把 manifest + 已查證事實基準塞進 `_context` 欄位（給 redo 重用，不渲染）。
+3. **寫結構化 JSON**：把彙整結果寫成 `<專案>/REDTEAM-REVIEW.json`，欄位見 [references/report-template.md](references/report-template.md) 的 JSON schema。**每個 before/after 的 before 必須是現況真實 code，after 是建議寫法**。把 manifest + 已查證事實基準塞進 `_context` 欄位（重跑時可重用，不渲染）。
 4. **產 GUI＋Markdown**：跑 `python3 scripts/render_html.py <專案>/REDTEAM-REVIEW.json --open` 產出同名 `.html`（單一自包含、離線可開的雙欄 before/after GUI）並用系統預設瀏覽器開啟；同時依同一份 JSON 寫一份 `REDTEAM-REVIEW.md` 給純文字場景。**這是每次跑完的固定產出，不要省略 HTML。**
 
-完成後進 Phase 4 的 redo 關卡，**不要在這裡自動套用 code**。
+完成後進 Phase 4 的套用關卡，**不要在這裡自動套用 code**。
 
 ---
 
-## Phase 4 — Redo 決策關卡
+## Phase 4 — 套用關卡（Apply gate）
 
-把報告交付後，主動列出 redo 選項讓使用者決定下一步（HTML 報告末尾也有同一份說明）。不要替使用者選；等指示再動。
+報告交付後，唯一要問的是：**這些建議要套用哪幾條？** 主動列出標「可自動套用」(✅) 的高信心低風險項，讓使用者選——全套 / 選幾條 / 都不套。**等明確指示再動 code。**
 
-- **重新全跑**：code 有大改、或想完全重來 → 從 Phase 0 重跑。
-- **換/加紅隊面向重跑**：重用 `_context` 的事實基準（跳過 Phase 0–1），只用新面向重派 Phase 2。例：「改用 效能/可靠性/UX 三面向」。
-- **深挖某發現**：對特定條目再派 agent 反駁或給更細修法，更新 JSON 後重渲染 HTML。
-- **套用後閉環**：經同意把標「可自動套用」的高信心低風險項套到工作區 → 逐項套用、回報 diff → 對**改完的 code** 再跑一輪確認沒引入新問題。套用後重渲染時把 JSON 的 `meta.applied` 設 `true`（HTML 橫幅會變成「已套用」）。
-- **結束**：留著報告，不動 code。
+- 得到同意後逐項套用、回報 diff 摘要；風險高或需取捨的項目（❌）永遠不自動套用，只留在報告。
+- 套用後把 JSON 的 `meta.applied` 設 `true` 並重渲染 HTML（橫幅會變「已套用」、before/after 對應實際變更）。
+- 套用完可順口問一句「要不要針對改動的部分再跑一輪確認沒改壞？」——要的話就是**再跑一次本 skill**，不是特殊模式。
 
-風險高或需取捨的項目永遠不自動套用，只留在報告。任何套用前一定先得到明確同意。
+> 不需要 redo 選單。想換視角重審、深挖某條、或 code 大改後重跑，使用者直接再講一句重新觸發 skill 即可——事實基準存在 JSON 的 `_context`，重跑時可重用、不必重新盤點。
 
 ---
 

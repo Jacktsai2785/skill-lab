@@ -128,17 +128,17 @@ def render(data: dict) -> str:
         '建議用 <code>git diff</code> 複核後再 commit。</div>'
         if applied else
         '<div class="banner">⚠️ 本報告為 skill 產出的<b>提案版</b>，下方「前後比較」為 before→after 設計，'
-        '<b>尚未套用 code</b>（除非你在 Redo 關卡選了「套用」）。</div>'
+        '<b>尚未套用 code</b>（要套用請在對話告訴 Claude 要套哪幾條）。</div>'
     )
 
-    redo = '''  <h2>⑥ 想再跑一輪？（Redo）</h2>
-  <div class="note">這份是一次審查的快照。回到 Claude 對話，直接說出你要的模式即可：
+    redo = '''  <h2>⑥ 下一步：要套用哪幾條？</h2>
+  <div class="note">回到 Claude 對話，告訴它要套用上面「排序行動項」中標 ✅ 的哪些建議：
     <ul style="margin:8px 0 0;padding-left:20px">
-      <li><b>重新全跑</b> — 重新盤點 + 三紅隊（code 有大改後用）</li>
-      <li><b>換/加紅隊面向重跑</b> — 重用事實基準、只換視角（例：「改用 效能/可靠性/UX 三面向」）</li>
-      <li><b>深挖某發現</b> — 對特定條目再派 agent 反駁或給更細修法（例：「深挖 data_store 那條」）</li>
-      <li><b>套用後閉環</b> — 套用 ✅ 項 → 對改完的 code 再跑一輪，確認沒引入新問題</li>
+      <li><b>全套 ✅ 項</b> — 套用所有標「可自動套用」的高信心低風險項</li>
+      <li><b>選幾條</b> — 例：「套用 #1 #2 #4」</li>
+      <li><b>都先不套</b> — 留著這份報告當參考</li>
     </ul>
+    套用後想針對改動再跑一輪確認沒改壞、或想換視角重審 / 深挖某條，直接再講一句重新觸發 skill 即可。
   </div>'''
 
     return TEMPLATE.format(

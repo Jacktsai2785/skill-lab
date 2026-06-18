@@ -36,8 +36,8 @@ Phase 3 先寫**結構化 JSON**（`<專案>/REDTEAM-REVIEW.json`），再用 `s
      "auto": true, "note": "auto=false 時填不能自動套用的原因"}
   ],
   "_context": {
-    "manifest": "Phase 0 manifest（給 redo 重用，不渲染）",
-    "fact_base": "Phase 1 已查證事實基準（給 redo 重用，不渲染）"
+    "manifest": "Phase 0 manifest（重跑時可重用，不渲染）",
+    "fact_base": "Phase 1 已查證事實基準（重跑時可重用，不渲染）"
   }
 }
 ```
