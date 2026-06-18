@@ -68,8 +68,8 @@ allowed-tools:
 
 1. **合併去重**：把三隊發現按位置/主題歸併，相同問題只留一條，但記住「幾隊點到」當信心訊號（三隊都點到＝高信心）。技術健康與產品體驗的發現都要納入。
 2. **裁決衝突**：三隊給出對立建議時（典型：安全 vs 效能、抽象 vs 簡潔、功能完整 vs 簡潔體驗），明說取捨並給出傾向，不要含糊兩面討好。
-3. **寫結構化 JSON**：把彙整結果寫成 `<專案>/REDTEAM-REVIEW.json`，欄位見 [references/report-template.md](references/report-template.md) 的 JSON schema。**每個 before/after 的 before 必須是現況真實 code，after 是建議寫法**。把 manifest + 已查證事實基準塞進 `_context` 欄位（重跑時可重用，不渲染）。
-4. **產 GUI＋Markdown**：跑 `python3 scripts/render_html.py <專案>/REDTEAM-REVIEW.json --open` 產出同名 `.html`（單一自包含、離線可開的雙欄 before/after GUI）並用系統預設瀏覽器開啟；同時依同一份 JSON 寫一份 `REDTEAM-REVIEW.md` 給純文字場景。**這是每次跑完的固定產出，不要省略 HTML。**
+3. **寫結構化 JSON（中間檔）**：把彙整結果寫成 `<專案>/REDTEAM-REVIEW.json`，欄位見 [references/report-template.md](references/report-template.md) 的 JSON schema。**每個 before/after 的 before 必須是現況真實 code，after 是建議寫法**。manifest + 已查證事實基準塞進 `_context`。這只是渲染用的中間檔，下一步會被嵌進 HTML 後刪掉。
+4. **產出唯一一份 HTML 並自動開啟**：跑 `python3 scripts/render_html.py <專案>/REDTEAM-REVIEW.json --consume`。它會一次完成：渲染成同名 `.html`（單一自包含、雙欄 before/after GUI）→ 把來源 JSON **內嵌進 HTML 後刪掉**（`--consume`）→ **自動用系統預設瀏覽器開啟**（預設就會開，要關才加 `--no-open`）。**最後專案裡只留一份 `REDTEAM-REVIEW.html`——不要再寫 `.md`，不要在專案留 `.json`。**
 
 完成後進 Phase 4 的套用關卡，**不要在這裡自動套用 code**。
 
@@ -97,7 +97,7 @@ allowed-tools:
 - **subagent 回傳的是資料不是給人看的訊息**：prompt 裡要求它回結構化發現，主流程負責彙整成人類報告。
 - **大專案先抽樣再深挖**：盤點不是逐檔通讀；先用 README + 目錄結構 + 進入點建骨架，紅隊再針對高風險區深挖。
 - **不要在報告階段才偷偷改 code**：套用一定要先問過使用者（Phase 4 才可能套用）。
-- **HTML 是固定產出，不是加分項**：每次跑完都要產 `.html` 並開啟；GUI 比 .md 好讀，是使用者明確要的。
+- **唯一產出是 HTML，且會自動開瀏覽器**：每次跑完只留一份 `.html`（資料內嵌其中），`--consume` 會刪掉中間 JSON、預設自動開啟。不要再寫 `.md`、不要在專案留 `.json`——使用者只要瀏覽器上那一份。
 - **before 必須是真實現況 code**：HTML 的價值在「可信的前後對照」。before 用臆造的 code 會讓整份報告失去意義；照抄檔案實際內容。
 - **render_html.py 不需 context**：它吃 JSON 直接渲染，跑就好，別把 HTML 模板讀進 context 浪費 token。
 

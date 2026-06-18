@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """把紅隊審查的結構化 JSON 渲染成單一自包含 HTML（離線可開、零外部相依）。
 
+預設行為：渲染後**自動用系統預設瀏覽器開啟**，並把來源 JSON **內嵌進 HTML**
+（藏在 <script type="application/json">），所以最後專案裡只需要這一份 .html
+——資料沒丟、重跑可從 HTML 撈回來。加 --consume 連帶刪掉來源 JSON。
+
 用法:
-    python render_html.py <findings.json> [-o out.html] [--open]
+    python render_html.py <findings.json> [-o out.html] [--no-open] [--consume]
 
 JSON 結構見 references/report-template.md 的「結構化 JSON schema」一節。
-未知欄位一律忽略，缺欄位走合理預設，讓 redo / 半填的 JSON 也能渲染。
+未知欄位一律忽略，缺欄位走合理預設，讓重跑 / 半填的 JSON 也能渲染。
 """
 import argparse
 import html
@@ -141,6 +145,10 @@ def render(data: dict) -> str:
     套用後想針對改動再跑一輪確認沒改壞、或想換視角重審 / 深挖某條，直接再講一句重新觸發 skill 即可。
   </div>'''
 
+    # 把來源資料內嵌進 HTML，讓單一 .html 自帶資料（重跑可撈回）。
+    # 跳脫 </ 以免提前關閉 <script>；大括號不影響 .format（這是被代入的值，不會二次解析）。
+    embed = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+
     return TEMPLATE.format(
         project=esc(meta.get("project", "")),
         date=esc(meta.get("date", "")),
@@ -154,6 +162,7 @@ def render(data: dict) -> str:
         before_after="\n".join(ba_html) or '  <div class="note">無 before/after 提案。</div>',
         actions="\n".join(act_html),
         redo=redo,
+        embed=embed,
     )
 
 
@@ -188,7 +197,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("json", help="findings JSON 路徑")
     ap.add_argument("-o", "--out", help="輸出 HTML 路徑（預設與 JSON 同名 .html）")
-    ap.add_argument("--open", action="store_true", help="渲染後用系統預設瀏覽器開啟")
+    ap.add_argument("--no-open", action="store_true", help="渲染後不要自動開瀏覽器（預設會開）")
+    ap.add_argument("--consume", action="store_true", help="渲染成功後刪掉來源 JSON（資料已內嵌進 HTML）")
     args = ap.parse_args()
 
     src = Path(args.json)
@@ -203,7 +213,13 @@ def main():
     out = Path(args.out) if args.out else src.with_suffix(".html")
     out.write_text(render(data), encoding="utf-8")
     print(f"已產出 HTML：{out}")
-    if args.open:
+    if args.consume and src.resolve() != out.resolve():
+        try:
+            src.unlink()
+            print(f"已刪除來源 JSON（資料已內嵌進 HTML）：{src}")
+        except OSError as e:
+            print(f"（來源 JSON 刪除失敗，可手動清除：{src}）{e}", file=sys.stderr)
+    if not args.no_open:
         open_in_browser(out)
 
 
@@ -279,6 +295,7 @@ TEMPLATE = '''<!DOCTYPE html>
 </style>
 </head>
 <body>
+<script type="application/json" id="redteam-source">{embed}</script>
 <div class="wrap">
   <h1>紅隊審查與最佳設計</h1>
   <div class="meta">專案 <b>{project}</b> ・ 日期 <b>{date}</b> ・ 型態 <b>{ptype}</b> ・ 三面向 <b>{dims}</b></div>
