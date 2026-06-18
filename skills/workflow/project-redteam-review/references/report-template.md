@@ -1,6 +1,60 @@
-# 最佳設計報告模板
+# 報告模板
 
-寫進 `<專案>/REDTEAM-REVIEW.md`（或使用者指定處）。**精簡優先**：每點一條、不重複、清單勝於長段落。
+Phase 3 先寫**結構化 JSON**（`<專案>/REDTEAM-REVIEW.json`），再用 `scripts/render_html.py` 渲染成 HTML GUI，並另寫一份 markdown。三者同源。
+
+## 結構化 JSON schema（HTML 的資料來源）
+
+`render_html.py` 吃這份 JSON。未知欄位忽略、缺欄位走預設，所以可漸進填。
+
+```json
+{
+  "meta": {
+    "project": "專案名", "date": "YYYY-MM-DD",
+    "type": "專案型態", "dimensions": ["安全", "正確性", "架構"],
+    "applied": false
+  },
+  "teams": [
+    {"idx": "①", "title": "安全與攻擊面", "angle": "這隊看什麼…",
+     "counts": {"高": 2, "中": 3, "低": 1}}
+  ],
+  "cross_check": "兩隊獨立都抓到同一問題的高信心訊號（沒有就留空字串）",
+  "findings": [
+    {"team": "安全與攻擊面", "severity": "高",
+     "location": "path:line", "problem": "一句話", "suggestion": "建議改法"}
+  ],
+  "conflicts": [
+    {"issue": "A 主張 vs B 主張", "lean": "傾向哪個＋一句理由"}
+  ],
+  "before_after": [
+    {"id": "A", "title": "改什麼", "severity": "高", "file": "path",
+     "open": true,
+     "before": "現況真實 code（照抄，含換行）",
+     "after": "建議寫法"}
+  ],
+  "actions": [
+    {"n": 1, "action": "行動", "confidence": "高", "risk": "低",
+     "auto": true, "note": "auto=false 時填不能自動套用的原因"}
+  ],
+  "_context": {
+    "manifest": "Phase 0 manifest（給 redo 重用，不渲染）",
+    "fact_base": "Phase 1 已查證事實基準（給 redo 重用，不渲染）"
+  }
+}
+```
+
+關鍵：`findings[].team` 要對得上某個 `teams[].title` 才會歸到該隊底下。`before` **必須是檔案實際內容**，不可臆造。
+
+## 渲染與開啟
+
+```bash
+python3 scripts/render_html.py <專案>/REDTEAM-REVIEW.json --open
+```
+
+---
+
+## Markdown 版（純文字場景備援）
+
+**精簡優先**：每點一條、不重複、清單勝於長段落。
 
 ```markdown
 # 紅隊審查與最佳設計 — {專案名}
