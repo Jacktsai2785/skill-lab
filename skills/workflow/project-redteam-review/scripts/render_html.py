@@ -12,6 +12,7 @@ import html
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -42,7 +43,7 @@ def render(data: dict) -> str:
     for i, t in enumerate(teams):
         counts = t.get("counts", {})
         cnt = " ".join(
-            f'<span class="pill sev-{SEV_CLASS.get(s,"lo")}">{counts[s]} {s}</span>'
+            f'<span class="pill sev-{SEV_CLASS.get(s,"lo")}">{counts.get(s)} {s}</span>'
             for s in ("高", "中", "低") if counts.get(s)
         )
         cards.append(f'''    <div class="card {accent[i % 6]}">
@@ -58,17 +59,20 @@ def render(data: dict) -> str:
     )
 
     # findings grouped by team (keep input order of teams)
-    team_order = [t.get("title", t.get("key", "")) for t in teams]
+    team_order = [(t.get("title") or t.get("key") or "") for t in teams]
+    seen_teams = {t for t in team_order if t}
 
     def team_key(f):
         return f.get("team", "")
     grouped = []
     for tk in team_order:
+        if not tk:  # 跳過無標題的卡片，避免 orphan finding 被誤掛到空標題下
+            continue
         items = [f for f in findings if team_key(f) == tk]
         if items:
             grouped.append((tk, items))
-    # any findings whose team didn't match a card
-    leftover = [f for f in findings if team_key(f) not in team_order]
+    # any findings whose team didn't match a (non-empty) card title
+    leftover = [f for f in findings if team_key(f) not in seen_teams]
     if leftover:
         grouped.append(("其他", leftover))
 
@@ -146,28 +150,28 @@ def render(data: dict) -> str:
     )
 
 
-def open_in_browser(path: Path):
+def open_in_browser(path: Path) -> bool:
     p = str(path)
     try:
         sysname = platform.system()
         if sysname == "Darwin":
             subprocess.run(["open", p], check=False)
-        elif sysname == "Windows":
+            return True
+        if sysname == "Windows":
             os.startfile(p)  # type: ignore[attr-defined]
-        else:  # Linux / WSL
-            for opener in ("wslview", "xdg-open"):
-                if subprocess.run(["bash", "-lc", f"command -v {opener}"],
-                                  capture_output=True).returncode == 0:
-                    subprocess.Popen([opener, p],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    return True
-            # WSL fallback: explorer.exe with Windows path
-            if subprocess.run(["bash", "-lc", "command -v explorer.exe"],
-                              capture_output=True).returncode == 0:
-                win = subprocess.run(["wslpath", "-w", p], capture_output=True, text=True)
-                subprocess.Popen(["explorer.exe", win.stdout.strip() or p])
+            return True
+        # Linux / WSL
+        for opener in ("wslview", "xdg-open"):
+            if shutil.which(opener):
+                subprocess.Popen([opener, p],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 return True
-        return True
+        if shutil.which("explorer.exe"):  # WSL fallback：用 Windows 路徑
+            win = subprocess.run(["wslpath", "-w", p], capture_output=True, text=True)
+            subprocess.Popen(["explorer.exe", win.stdout.strip() or p])
+            return True
+        print(f"（找不到瀏覽器開啟器，請手動開：{p}）", file=sys.stderr)
+        return False
     except Exception as e:
         print(f"（自動開啟失敗，請手動開：{p}）{e}", file=sys.stderr)
         return False
@@ -181,7 +185,14 @@ def main():
     args = ap.parse_args()
 
     src = Path(args.json)
-    data = json.loads(src.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(src.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        print(f"找不到 JSON：{src}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"JSON 格式錯誤（{src}）：{e}", file=sys.stderr)
+        sys.exit(1)
     out = Path(args.out) if args.out else src.with_suffix(".html")
     out.write_text(render(data), encoding="utf-8")
     print(f"已產出 HTML：{out}")
