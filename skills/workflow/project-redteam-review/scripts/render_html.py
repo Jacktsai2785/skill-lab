@@ -28,6 +28,13 @@ def sev_pill(sev):
     return f'<span class="pill sev-{SEV_CLASS.get(sev, "lo")}">{esc(sev)}</span>'
 
 
+def cat_tag(cat):
+    if not cat:
+        return ""
+    cls = "cat-ux" if ("產品" in cat or "體驗" in cat or "UX" in cat.upper()) else "cat-tech"
+    return f'<span class="cat {cls}">{esc(cat)}</span>'
+
+
 def render(data: dict) -> str:
     meta = data.get("meta", {})
     teams = data.get("teams", [])
@@ -82,7 +89,7 @@ def render(data: dict) -> str:
         for f in items:
             sev = f.get("severity", "低")
             find_html.append(f'''  <div class="find {SEV_CLASS.get(sev,"lo")}">
-    <div class="row">{sev_pill(sev)}<span class="loc">{esc(f.get("location",""))}</span></div>
+    <div class="row">{sev_pill(sev)}{cat_tag(f.get("category",""))}<span class="loc">{esc(f.get("location",""))}</span></div>
     <div class="prob">{esc(f.get("problem",""))}</div>
     <div class="sug"><b>建議：</b>{esc(f.get("suggestion",""))}</div>
   </div>''')
@@ -232,6 +239,9 @@ TEMPLATE = '''<!DOCTYPE html>
   .sev-hi{{background:rgba(255,107,107,.16);color:var(--hi);border:1px solid var(--hi)}}
   .sev-mid{{background:rgba(255,180,84,.16);color:var(--mid);border:1px solid var(--mid)}}
   .sev-lo{{background:rgba(127,138,155,.16);color:var(--lo);border:1px solid var(--lo)}}
+  .cat{{display:inline-block;border-radius:6px;padding:1px 8px;font-size:11.5px;font-weight:600;border:1px solid var(--line);color:var(--muted)}}
+  .cat-tech{{color:var(--accent);border-color:var(--accent);background:rgba(110,168,254,.12)}}
+  .cat-ux{{color:var(--ok);border-color:var(--ok);background:rgba(61,220,132,.12)}}
   .c1{{border-top:3px solid var(--hi)}}.c2{{border-top:3px solid var(--mid)}}.c3{{border-top:3px solid var(--accent)}}
   .find{{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}}
   .find.hi{{border-left-color:var(--hi)}}.find.mid{{border-left-color:var(--mid)}}.find.lo{{border-left-color:var(--lo)}}

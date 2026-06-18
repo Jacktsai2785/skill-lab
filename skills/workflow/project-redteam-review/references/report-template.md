@@ -14,13 +14,13 @@ Phase 3 先寫**結構化 JSON**（`<專案>/REDTEAM-REVIEW.json`），再用 `s
     "applied": false
   },
   "teams": [
-    {"idx": "①", "title": "安全與攻擊面", "angle": "這隊看什麼…",
+    {"idx": "①", "title": "新手 / 終端使用者", "angle": "這個視角的切入重心…",
      "counts": {"高": 2, "中": 3, "低": 1}}
   ],
-  "cross_check": "兩隊獨立都抓到同一問題的高信心訊號（沒有就留空字串）",
+  "cross_check": "多隊獨立都抓到同一問題的高信心訊號（沒有就留空字串）",
   "findings": [
-    {"team": "安全與攻擊面", "severity": "高",
-     "location": "path:line", "problem": "一句話", "suggestion": "建議改法"}
+    {"team": "新手 / 終端使用者", "category": "產品體驗", "severity": "高",
+     "location": "path:line 或 文檔/流程位置", "problem": "一句話", "suggestion": "建議改法"}
   ],
   "conflicts": [
     {"issue": "A 主張 vs B 主張", "lean": "傾向哪個＋一句理由"}
@@ -42,7 +42,7 @@ Phase 3 先寫**結構化 JSON**（`<專案>/REDTEAM-REVIEW.json`），再用 `s
 }
 ```
 
-關鍵：`findings[].team` 要對得上某個 `teams[].title` 才會歸到該隊底下。`before` **必須是檔案實際內容**，不可臆造。
+關鍵：`teams` 是三個**視角（persona）**而非分工面向（新手使用者 / 重度使用者+維護者 / 對抗者）。`findings[].team` 要對得上某個 `teams[].title` 才會歸到該視角底下；`findings[].category` 填 `技術健康` 或 `產品體驗`（HTML 會以小標籤顯示）。`before` **必須是檔案實際內容**，不可臆造。
 
 ## 渲染與開啟
 
