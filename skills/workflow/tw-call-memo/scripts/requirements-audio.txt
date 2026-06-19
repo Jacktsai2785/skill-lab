@@ -1,0 +1,5 @@
+# Optional audio support for tw-call-memo --audio
+# Also requires the ffmpeg system binary:
+#   Linux:  sudo apt install ffmpeg
+#   macOS:  brew install ffmpeg
+openai-whisper>=20250625
