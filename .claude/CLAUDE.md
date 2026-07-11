@@ -7,8 +7,8 @@
 - 有自己的 GitHub remote，是跨裝置同步與備份的來源。
 
 ## 結構
-- `skills/<category>/<name>/SKILL.md` —— 一個 skill 一個資料夾。
-- `skills/<category>/<name>/references/` —— 該 skill 的補充參考文件。
+- `jackskill/<category>/<name>/SKILL.md` —— 一個 skill 一個資料夾。
+- `jackskill/<category>/<name>/references/` —— 該 skill 的補充參考文件。
 - `deploy.sh` —— 把每個 skill symlink 進 `~/.claude/skills/`，全域可用。
 
 ## 規則

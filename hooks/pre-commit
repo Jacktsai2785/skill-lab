@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# pre-commit — 每次 commit 前對 staged diff 跑 /code-review xhigh,FAIL 則擋下。
+set -uo pipefail
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib-review.sh"
+
+# 沒有 staged 變更(例如 merge、--allow-empty)就不審
+if git diff --cached --quiet 2>/dev/null; then
+  run_repo_hook pre-commit "$@"; exit $?
+fi
+
+if ! review_gate "本次只審查 staged 的變更(git diff --cached),working tree 未 staged 的部分一律忽略"; then
+  echo "❌ code review 未通過 — commit 已擋下。"
+  echo "   修正後重試;或 SKIP_REVIEW=1 git commit …/ git commit --no-verify 強行通過。"
+  exit 1
+fi
+
+run_repo_hook pre-commit "$@"
