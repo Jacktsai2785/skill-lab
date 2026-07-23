@@ -1,0 +1,6 @@
+interface:
+  display_name: "Personal Workspace"
+  short_description: "安全建立與維護 Obsidian 風格個人筆記庫"
+  default_prompt: "Use $personal-workspace to preview a safe personal Markdown workspace at my chosen path."
+policy:
+  allow_implicit_invocation: true

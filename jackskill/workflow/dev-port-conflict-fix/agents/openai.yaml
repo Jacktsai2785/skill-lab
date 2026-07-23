@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dev Port Conflict Fix"
+  short_description: "安全定位並修復本機開發服務的 Port 衝突"
+  default_prompt: "Use $dev-port-conflict-fix to diagnose this local port conflict and propose the smallest safe repair."
+policy:
+  allow_implicit_invocation: true

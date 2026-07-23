@@ -1,0 +1,6 @@
+interface:
+  display_name: "PDF OCR Routing"
+  short_description: "逐頁判斷 PDF 原生文字與 OCR 路由"
+  default_prompt: "Use $pdf-ocr-routing to extract this PDF without silently losing scanned or mixed pages."
+policy:
+  allow_implicit_invocation: true

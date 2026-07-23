@@ -1,0 +1,6 @@
+interface:
+  display_name: "Excel SSOT Display Order Sync"
+  short_description: "稽核並同步 Excel 到前端的顯示順序"
+  default_prompt: "Use $excel-ssot-display-order-sync to audit display order from the source file through the database, API, and frontend."
+policy:
+  allow_implicit_invocation: true
