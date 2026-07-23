@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Red-Team Review"
+  short_description: "全專案事實查證、三視角紅隊審查與可執行 HTML 報告"
+  default_prompt: "Use $project-redteam-review to audit this entire project and produce an evidence-backed red-team report."
+policy:
+  allow_implicit_invocation: false

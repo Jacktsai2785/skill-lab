@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""把紅隊審查的結構化 JSON 渲染成單一自包含 HTML（離線可開、零外部相依）。
+"""把紅隊審查資料渲染成單一自包含 HTML（離線可開、零外部相依）。
 
 預設行為：渲染後**自動用系統預設瀏覽器開啟**，並把來源 JSON **內嵌進 HTML**
 （藏在 <script type="application/json">），所以最後專案裡只需要這一份 .html
 ——資料沒丟、重跑可從 HTML 撈回來。加 --consume 連帶刪掉來源 JSON。
 
 用法:
-    python render_html.py <findings.json> [-o out.html] [--no-open] [--consume]
+    python render_html.py <findings.json|report.html> [-o out.html] [--no-open]
+                          [--consume] [--applied]
+    python render_html.py <report.html> --export-json <findings.json>
 
 JSON 結構見 references/report-template.md 的「結構化 JSON schema」一節。
 未知欄位一律忽略，缺欄位走合理預設，讓重跑 / 半填的 JSON 也能渲染。
@@ -16,12 +18,17 @@ import html
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 SEV_CLASS = {"高": "hi", "中": "mid", "低": "lo"}
+EMBEDDED_DATA_RE = re.compile(
+    r'<script\b[^>]*\bid=["\']redteam-source["\'][^>]*>(.*?)</script\s*>',
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def esc(s):
@@ -37,6 +44,23 @@ def cat_tag(cat):
         return ""
     cls = "cat-ux" if ("產品" in cat or "體驗" in cat or "UX" in cat.upper()) else "cat-tech"
     return f'<span class="cat {cls}">{esc(cat)}</span>'
+
+
+def load_data(src: Path) -> dict:
+    """從 JSON 或本 renderer 產出的 HTML 載入報告資料。"""
+    text = src.read_text(encoding="utf-8")
+    if src.suffix.lower() != ".html":
+        data = json.loads(text)
+    else:
+        match = EMBEDDED_DATA_RE.search(text)
+        if not match:
+            raise ValueError(
+                f"HTML 內找不到 id=redteam-source 的內嵌資料：{src}"
+            )
+        data = json.loads(match.group(1))
+    if not isinstance(data, dict):
+        raise ValueError("報告資料的最外層必須是 JSON object")
+    return data
 
 
 def render(data: dict) -> str:
@@ -92,10 +116,22 @@ def render(data: dict) -> str:
         find_html.append(f"  <h3>{esc(tk)}</h3>")
         for f in items:
             sev = f.get("severity", "低")
+            confidence = f.get("confidence", "")
+            confidence_html = (
+                f'<span class="pill sev-{SEV_CLASS.get(confidence, "lo")}">'
+                f'信心 {esc(confidence)}</span>'
+                if confidence else ""
+            )
+            evidence = f.get("evidence", "")
+            evidence_html = (
+                f'<div class="ev"><b>證據：</b>{esc(evidence)}</div>'
+                if evidence else ""
+            )
             find_html.append(f'''  <div class="find {SEV_CLASS.get(sev,"lo")}">
-    <div class="row">{sev_pill(sev)}{cat_tag(f.get("category",""))}<span class="loc">{esc(f.get("location",""))}</span></div>
+    <div class="row">{sev_pill(sev)}{cat_tag(f.get("category",""))}{confidence_html}<span class="loc">{esc(f.get("location",""))}</span></div>
     <div class="prob">{esc(f.get("problem",""))}</div>
     <div class="sug"><b>建議：</b>{esc(f.get("suggestion",""))}</div>
+    {evidence_html}
   </div>''')
 
     conf_html = []
@@ -195,25 +231,43 @@ def open_in_browser(path: Path) -> bool:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("json", help="findings JSON 路徑")
+    ap.add_argument("source", help="findings JSON 或既有 REDTEAM-REVIEW.html 路徑")
     ap.add_argument("-o", "--out", help="輸出 HTML 路徑（預設與 JSON 同名 .html）")
     ap.add_argument("--no-open", action="store_true", help="渲染後不要自動開瀏覽器（預設會開）")
     ap.add_argument("--consume", action="store_true", help="渲染成功後刪掉來源 JSON（資料已內嵌進 HTML）")
+    ap.add_argument("--applied", action="store_true", help="把 meta.applied 設為 true 後渲染")
+    ap.add_argument("--export-json", metavar="PATH", help="從來源匯出 JSON 後結束，不渲染 HTML")
     args = ap.parse_args()
 
-    src = Path(args.json)
+    src = Path(args.source)
     try:
-        data = json.loads(src.read_text(encoding="utf-8"))
+        data = load_data(src)
     except FileNotFoundError:
-        print(f"找不到 JSON：{src}", file=sys.stderr)
+        print(f"找不到來源檔：{src}", file=sys.stderr)
         sys.exit(1)
     except json.JSONDecodeError as e:
-        print(f"JSON 格式錯誤（{src}）：{e}", file=sys.stderr)
+        print(f"內嵌或來源 JSON 格式錯誤（{src}）：{e}", file=sys.stderr)
         sys.exit(1)
+    except (OSError, ValueError) as e:
+        print(f"無法讀取報告資料（{src}）：{e}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.export_json:
+        exported = Path(args.export_json)
+        exported.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"已匯出 JSON：{exported}")
+        return
+
+    if args.applied:
+        data.setdefault("meta", {})["applied"] = True
+
     out = Path(args.out) if args.out else src.with_suffix(".html")
     out.write_text(render(data), encoding="utf-8")
     print(f"已產出 HTML：{out}")
-    if args.consume and src.resolve() != out.resolve():
+    if args.consume and src.suffix.lower() == ".json" and src.resolve() != out.resolve():
         try:
             src.unlink()
             print(f"已刪除來源 JSON（資料已內嵌進 HTML）：{src}")
@@ -264,7 +318,8 @@ TEMPLATE = '''<!DOCTYPE html>
   .find .loc{{font-family:monospace;font-size:12.5px;color:var(--accent);word-break:break-all}}
   .find .prob{{margin:6px 0 4px}}
   .find .sug{{font-size:14px;color:var(--muted)}}
-  .find .sug b{{color:var(--text)}}
+  .find .ev{{font-size:13px;color:var(--muted);margin-top:3px}}
+  .find .sug b,.find .ev b{{color:var(--text)}}
   .row{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
   .note{{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:14px;margin:14px 0}}
   .note .ok{{color:var(--ok);font-weight:600}}
