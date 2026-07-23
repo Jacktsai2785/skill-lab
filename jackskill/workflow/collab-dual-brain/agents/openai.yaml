@@ -1,0 +1,6 @@
+interface:
+  display_name: "Collab Dual Brain"
+  short_description: "啟動 Claude 與 Codex 雙盲設計審查與證據收斂"
+  default_prompt: "Use $collab-dual-brain to run a dual-model review of this design and return an evidence-backed decision report."
+policy:
+  allow_implicit_invocation: false
