@@ -25,7 +25,7 @@ def sample_data():
                 "category": "技術健康",
                 "severity": "高",
                 "location": "src/main.py:1",
-                "problem": "</script><script>alert('x')</script>",
+                "problem": "<!--<script src='legacy.js'></script>",
                 "suggestion": "修正",
                 "confidence": "高",
                 "evidence": "src/main.py:1 可直接重現",
@@ -62,7 +62,9 @@ class RenderHtmlCliTests(unittest.TestCase):
             self.assertFalse(source.exists())
             self.assertTrue(html.exists())
             html_text = html.read_text(encoding="utf-8")
-            self.assertNotIn("</script><script>alert", html_text)
+            self.assertNotIn("<!--<script", html_text)
+            self.assertNotIn("<script src='legacy.js'>", html_text)
+            self.assertIn("\\u003c!--\\u003cscript", html_text)
             self.assertIn("信心 高", html_text)
             self.assertIn("src/main.py:1 可直接重現", html_text)
 
@@ -70,12 +72,13 @@ class RenderHtmlCliTests(unittest.TestCase):
             restored = json.loads(exported.read_text(encoding="utf-8"))
             self.assertEqual(restored, sample_data())
 
-            self.run_cli(exported, "--applied", "--consume", "--no-open")
-            self.assertFalse(exported.exists())
-            applied_html = exported.with_suffix(".html")
-            self.run_cli(applied_html, "--export-json", exported)
-            applied = json.loads(exported.read_text(encoding="utf-8"))
+            applied_json = root / "applied.json"
+            self.run_cli(html, "--applied", "--export-json", applied_json)
+            applied = json.loads(applied_json.read_text(encoding="utf-8"))
             self.assertTrue(applied["meta"]["applied"])
+
+            self.run_cli(applied_json, "--consume", "--no-open")
+            self.assertFalse(applied_json.exists())
 
     def test_rejects_html_without_embedded_report_data(self):
         with tempfile.TemporaryDirectory() as tmp:

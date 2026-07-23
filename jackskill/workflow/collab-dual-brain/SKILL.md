@@ -70,7 +70,7 @@ collab status RUN_ID                       # 取得 run ID 後查狀態
 | `awaiting_user_facts` | 詢問缺少事實；目前 CLI 沒有補寫既有 brief 的命令，取得新事實與重開同意後 cancel 舊 run，使用完整 brief 開新 run |
 | `paused_budget_exhausted` | 讀取 CLI 顯示的 exhausted dimensions，提出最小追加量、目前 tokens（含 `+cache`）與影響；**等使用者同意**後才 `extend-budget`，再 `resume` |
 | `paused_agent_unavailable` | 直接 `collab resume RUN_ID` 重試一次；再失敗才回報使用者 |
-| `paused_waiting_user` | 先看 `paused_from`。若來自 decision，先 `resume` 回 decision state，再依卡片 `answer`；若來自 facts，取得事實後依上一列重開 run |
+| `paused_waiting_user` | 先看 `paused_from`。若來自 decision，先 `resume` 回 decision state，再依卡片 `answer`；若來自 facts，取得事實後依 `awaiting_user_facts` 列重開 run |
 | `awaiting_user_decision` | 用 `collab report RUN_ID --format json` 取得全部 pending cards，整批呈現問題、選項、影響與建議值；取得使用者選擇後逐張 `answer`，每次都重新查狀態。不可代替使用者做風險決策 |
 | `completed` / `completed_with_unverified_hard_ac` | 進入交付 |
 | `escalated_for_redesign` | 回報需重設計的理由；只有使用者確認新前提後才開新 run |

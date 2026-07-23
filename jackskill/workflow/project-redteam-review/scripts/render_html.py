@@ -182,8 +182,9 @@ def render(data: dict) -> str:
   </div>'''
 
     # 把來源資料內嵌進 HTML，讓單一 .html 自帶資料（重跑可撈回）。
-    # 跳脫 </ 以免提前關閉 <script>；大括號不影響 .format（這是被代入的值，不會二次解析）。
-    embed = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    # 跳脫所有 "<"，同時防止 </script> 提前關閉與 <!-- + <script 觸發
+    # HTML tokenizer 的 script-data double-escaped state，導致整頁被吞進 script。
+    embed = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
 
     return TEMPLATE.format(
         project=esc(meta.get("project", "")),
@@ -252,6 +253,9 @@ def main():
         print(f"無法讀取報告資料（{src}）：{e}", file=sys.stderr)
         sys.exit(1)
 
+    if args.applied:
+        data.setdefault("meta", {})["applied"] = True
+
     if args.export_json:
         exported = Path(args.export_json)
         exported.write_text(
@@ -260,9 +264,6 @@ def main():
         )
         print(f"已匯出 JSON：{exported}")
         return
-
-    if args.applied:
-        data.setdefault("meta", {})["applied"] = True
 
     out = Path(args.out) if args.out else src.with_suffix(".html")
     out.write_text(render(data), encoding="utf-8")
