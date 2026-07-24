@@ -4,7 +4,7 @@
 
 | 指令 | 用途 |
 |------|------|
-| `collab run -p "..." [flags]` | 啟動新 run（見下方 flags） |
+| `collab design -p "..." [flags]` | 啟動新的設計協作（見下方 flags） |
 | `collab init --output x.json` | 產生可版本化的 brief 模板 |
 | `collab status RUN_ID` | 狀態 + 預算用量（cycle/revisions/tokens/+cache） |
 | `collab issues RUN_ID [--open-only]` | canonical issues 清單 |

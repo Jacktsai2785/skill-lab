@@ -3,13 +3,14 @@
 我（Jack）自己原創的 Claude Code skill 開發庫，與 `rivendell`（朋友的 repo）獨立。
 透過 `deploy.sh` symlink 進 `~/.claude/skills/`，所有專案全域可用。
 
-## Skills（21）
+## Skills（22）
 
 ### workflow/
 | Skill | 說明 |
 |---|---|
 | `task-brief` | 四階段判斷（思考/探索/決定/執行）+ 五欄位任務定義 brief |
-| `collab-dual-brain` | 關鍵字觸發雙腦協調：Claude×Codex 雙盲提案互審，產出含圖設計報告（呼叫 collab CLI） |
+| `collab-design` | 關鍵字觸發雙腦開放式設計：Claude×Codex 雙盲提案互審，產出含圖設計報告（呼叫 `collab design`） |
+| `collab-review` | 將程式、workflow、log 與測試結果交給 Claude×Codex 依來源引文查證（呼叫 `collab review`） |
 | `dev-port-conflict-fix` | dev server port 衝突偵測與修復 |
 | `multi-project-port-replan` | 多專案 port 盤點、衝突診斷、重新規劃 |
 | `vscode-wsl-port-forwarding-debug` | WSL/VSCode PORTS 面板轉發除錯 |

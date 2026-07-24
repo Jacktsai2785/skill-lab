@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>collab 現行工作流程</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; padding: 32px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+    main { max-width: 1500px; margin: auto; }
+    h1 { margin: 0 0 8px; color: #67e8f9; }
+    p { margin: 0 0 24px; color: #cbd5e1; }
+    .mermaid { padding: 24px; overflow: auto; border-radius: 12px; background: #fff; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>collab 現行工作流程</h1>
+    <p>紫色是雙腦設計協作；藍色是一般分析、證據查證與正常開發。</p>
+    <pre class="mermaid">
+flowchart TD
+    userTask(["使用者的任務"]):::trigger
+    factualQuestion{"要確認既有程式／流程<br>有沒有事實上的問題嗎？"}:::decision
+    ordinaryAnalysis[/"一般分析<br>畫 Mermaid、理解 workflow、找假設"/]:::primary
+    noDualBrain(["不必啟動 collab<br>直接交付分析或處理小修正"]):::success
+
+    evidence[/"蒐集明確 evidence<br>程式、diff、workflow、log、測試結果"/]:::primary
+    evidenceReview[["collab-review skill<br>→ collab review CLI<br>兩個模型獨立查證同一份 evidence"]]:::ai
+    reviewResult[/"輸出：每個 finding 都有來源引文<br>confirmed / rejected / unverified"/]:::primary
+    confirmedBug{"已確認問題，且<br>要修改程式嗎？"}:::decision
+    normalDevelopment["一般開發流程<br>單一執行者修改 → 真實測試"]:::primary
+    recheck[["需要時再以 collab-review skill<br>→ collab review CLI 驗證修改後的事實"]]:::ai
+
+    designChoice{"有沒有唯一正解？<br>還是需要設計取捨？"}:::decision
+
+    subgraph futureEngineering["暫緩規劃：把 evidence review 變成可反覆修正的工程協作（尚未實作）"]
+        direction TB
+        repairPlan["只有要把 review 變成反覆修正流程時：<br>根據同一份 evidence 產生目標修正計畫"]:::planned
+        progressCheck{"同一 issue 是否有新 evidence<br>或修正範圍是否縮小？"}:::planned
+        stagnationStop["沒有進展 → 沿用既有 stagnation<br>停止重跑，交還使用者"]:::planned
+        implementationGate{"使用者是否正式授權<br>orchestrator 進入程式實作？"}:::planned
+        isolatedImplementation["隔離 worktree、單一寫入者<br>修改程式 → 真實測試"]:::planned
+    end
+
+    subgraph dualBrain["collab-design skill：只處理沒有唯一答案的設計題"]
+        direction TB
+        designBrief{{"建立 brief<br>目標、限制、hard AC、non-goal"}}:::primary
+        liveWatcher(["watcher + live HTML<br>只呈現進度，不自行改 run"]):::primary
+        blindProposals["Claude 與 Codex<br>各自提出方案"]:::ai
+        crossReview["匿名交叉審查 → 修訂 → 驗證／Judge"]:::ai
+        userDecision{"只剩產品偏好／風險取捨？"}:::decision
+        dashboard[/"Dashboard 顯示證據、分歧、選項<br>由使用者親自決定"/]:::primary
+        finalDesign[/"最終設計報告<br>方案、取捨、殘留風險、驗證建議<br>不是程式修改"/]:::success
+    end
+
+    userTask --> factualQuestion
+    factualQuestion -->|是| evidence
+    factualQuestion -->|否| designChoice
+    factualQuestion -->|只是理解／繪圖| ordinaryAnalysis --> noDualBrain
+    evidence --> evidenceReview --> reviewResult --> confirmedBug
+    confirmedBug -->|是| normalDevelopment --> recheck
+    confirmedBug -->|否或尚未確認| designChoice
+    recheck -->|仍有設計取捨| designChoice
+    recheck -->|已驗證修好| noDualBrain
+    evidenceReview -.-> repairPlan
+    repairPlan --> progressCheck
+    progressCheck -->|沒有進展| stagnationStop
+    progressCheck -->|有進展| implementationGate
+    implementationGate -->|授權| isolatedImplementation --> recheck
+    implementationGate -->|未授權| finalDesign
+    designChoice -->|沒有唯一答案| designBrief
+    designChoice -->|有明確答案| noDualBrain
+    designBrief --> liveWatcher --> blindProposals --> crossReview --> userDecision
+    userDecision -->|可由證據收斂| finalDesign
+    userDecision -->|需要使用者偏好| dashboard --> crossReview
+    finalDesign -.-> normalDevelopment
+
+    classDef trigger fill:#fed7aa,stroke:#c2410c,color:#374151
+    classDef success fill:#a7f3d0,stroke:#047857,color:#374151
+    classDef decision fill:#fef3c7,stroke:#b45309,color:#374151
+    classDef ai fill:#ddd6fe,stroke:#6d28d9,color:#374151
+    classDef primary fill:#3b82f6,stroke:#1e3a5f,color:#ffffff
+    classDef planned fill:#e2e8f0,stroke:#64748b,color:#334155,stroke-dasharray: 5 5
+    </pre>
+  </main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, securityLevel: "strict", theme: "base" });
+  </script>
+</body>
+</html>

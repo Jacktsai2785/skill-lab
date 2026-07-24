@@ -1,0 +1,4 @@
+interface:
+  display_name: "Collab Review"
+  short_description: "用 Claude 與 Codex 依證據查核程式、流程與測試結果"
+  default_prompt: "Use $collab-review to independently verify this code or workflow evidence and report only source-backed findings."

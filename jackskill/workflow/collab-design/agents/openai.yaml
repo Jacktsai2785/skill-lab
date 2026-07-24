@@ -1,0 +1,4 @@
+interface:
+  display_name: "Collab Design"
+  short_description: "讓 Claude 與 Codex 雙盲提案、互審並收斂設計取捨"
+  default_prompt: "Use $collab-design to develop and adjudicate an evidence-backed design proposal with Claude and Codex."
