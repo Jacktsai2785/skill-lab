@@ -1,6 +1,7 @@
 ---
-name: task-brief
-description: >
+name: >-
+  task-brief
+description: >-
   把模糊的交辦翻譯成 AI 能正確執行的「任務定義」。先判斷任務落在四階段
   （思考 / 探索 / 決定 / 執行）的哪一階段，每階段餵 AI 不同的東西；到執行階段，
   用五欄位（目標 / 背景 / 素材 / 邊界 / 完成定義）產出可直接貼上的 brief；
@@ -13,10 +14,13 @@ description: >
   先用本 skill 把任務定義清楚再執行。
   DO NOT TRIGGER when: 任務已定義清楚、使用者只要你執行；單步驟瑣事；
   或使用者明確說「直接做」「skip」。
-tags: [workflow, meta]
-version: 1.0.0
-user_invocable: true
-allowed-tools: "Read, Write, Edit, AskUserQuestion, Glob, Grep, WebSearch"
+when_to_use: >-
+  用於先釐清任務階段與輸入，再在交棒時選擇一般 Agent、collab-design 或
+  collab-review；任務已清楚且只是單步執行時直接交給一般 Agent。
+version: >-
+  1.1.0
+tags: >-
+  workflow, meta, routing
 ---
 
 # Task Brief — 任務定義教練
@@ -119,15 +123,39 @@ brief 本身就是 prompt，不需要任何花俏技巧。輸出範本見 `refer
 
 ## Step 4 — 交棒
 
-brief 完成後，它就是你要交出去的 prompt：
+brief 或階段產出完成後，先判斷工作意圖與協作強度，再交給執行器。需要分流時讀
+[references/collab-handoff.md](references/collab-handoff.md)，產出以下最小交棒契約：
 
-- 開新的執行 agent / session，把 brief 貼進去，或
-- 接給既有的執行型 skill（如規劃、領域 pipeline），或
-- 同一個任務換人做（外包 / 跨部門）也適用——這份 brief 是通用的。
+```yaml
+task_stage: thinking | exploration | decision | execution
+work_intent: design | implementation | review
+risk_profile: <profile or unknown>
+requested_collaboration: auto | reviewed | council
+evidence_paths: []
+recommended_executor: normal_agent | collab_design | collab_review
+reason: <一句可稽核理由>
+```
 
----
+- 既有產物且目標是查錯／驗證：交給 `collab-review`。
+- 尚未定案、存在多個合理方案或明確要求雙腦：交給 `collab-design`。
+- 明確、可逆、容易驗證且第二模型價值有限：交給一般 Agent。
+- Risk 是安全下限；Collaboration 是使用者要求的協作強度。使用者可以要求更重，
+  不能用 collaboration preference 降低風險要求。
+- 不要因為完成 task-brief 就必然啟動 collab；交棒本身不等於執行授權。
 
-## References
+## Gotchas
 
-- `references/five-fields.md` —— 五欄位逐欄定義、輸出範本，以及一個「同一個競品分析任務，用 brief 重交辦」的好 / 壞對照範例。
-- `references/stage-router.md` —— 四階段判斷準則、每階段該餵什麼 / 不該餵什麼、以及判斷錯階段的典型失敗。
+- **Task stage 與 collaboration depth 不同**：探索題可以由一般 Agent 做，也可以因
+  使用者要求而進 Council；不要把「探索」直接等同「高風險」。
+- **有檔案不等於 Review**：參考舊設計重新提出方案仍是 Design；判斷使用者期待的
+  輸出，不要只看附件是否存在。
+- **不要用 High risk 假裝使用者想要雙腦**：保留真實 risk tier，另用
+  collaboration mode 表達 Council 要求。
+- **明確任務可直接進下游 Skill**：使用者已指定 collab-design 或 collab-review 時，
+  不要為了形式重跑五欄位訪談。
+
+## 參考（漸進揭露）
+
+- [references/five-fields.md](references/five-fields.md) —— 進入執行階段、需要組裝 brief 時讀。
+- [references/stage-router.md](references/stage-router.md) —— 階段不明或容易混淆時讀。
+- [references/collab-handoff.md](references/collab-handoff.md) —— brief／階段產出完成、需要在一般 Agent、collab-design、collab-review 之間交棒時讀。

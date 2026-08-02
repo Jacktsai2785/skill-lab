@@ -10,7 +10,7 @@ when_to_use: >-
   用於使用者已同意啟動的重大開放式設計協作；在真僵局時呈現 evidence-backed
   decision card，但絕不代替使用者作風險或產品偏好決策。
 version: >-
-  4.3.0
+  4.4.0
 tags:
   - workflow
   - collaboration
@@ -20,8 +20,9 @@ tags:
 
 # collab-design — 雙腦開放式設計協調
 
-把設計題目交給本機的 `collab` CLI（claude-codex-orchestrator），讓 Claude 與
-Codex 雙盲提案、互審收斂，回傳含 Mermaid 圖與殘留風險清單的最終報告。
+把設計題目交給本機的 `collab` CLI（claude-codex-orchestrator）。Risk tier 決定
+最低安全路徑；本 skill 代表使用者明確要求雙腦，因此另外要求 Council collaboration，
+讓 Claude 與 Codex 雙盲提案、互審收斂。
 
 ## 啟動與授權
 
@@ -61,10 +62,21 @@ command -v codex
 素材檔案用 `--artifact 路徑`；複雜 brief 先 `collab init --output x.json` 再
 `--brief x.json`。
 
+不要把「使用者想要雙腦」假標成 High risk。保留真實 `--risk-profile`，並固定加入：
+
+```bash
+--collaboration-mode council \
+--collaboration-reason "user explicitly requested independent dual-model proposals"
+```
+
+CLI 會以 risk floor 與 collaboration request 中較重的路徑執行。
+
 ### 3. 背景執行並盯進度
 
 ```bash
-collab design -p "..." --hard-ac "..." ...   # 用宿主的長程序機制執行
+collab design -p "..." --hard-ac "..." \
+  --collaboration-mode council \
+  --collaboration-reason "user explicitly requested independent dual-model proposals" ...
 collab status RUN_ID                       # 取得 run ID 後查狀態
 ```
 
@@ -162,6 +174,8 @@ collab report RUN_ID --format html   # → ~/.collab-orchestrator/reports/RUN_ID
   `--max-active-seconds` 時，會持續收斂並記錄用量；只有呼叫者明確傳入這些
   ceiling 才會因 budget 暫停。真正的停止條件是 provider 不可用、模型輸出無效、
   真僵局或使用者決策。
+- **Risk 與 Collaboration 不可混用**：本 skill 要 Council 是因為使用者要求獨立雙方案，
+  不代表任務風險是 High。永遠保留真實 risk profile，讓 CLI 另外計算安全下限。
 - **resume 會自動沿用 execution profile**：一般直接用
   `collab resume RUN_ID`。`--fake/--real` 只是可選的一致性斷言；傳入與原 run
   不同的值會被拒絕，不能拿它切換 adapter。
