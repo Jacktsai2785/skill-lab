@@ -10,7 +10,7 @@ when_to_use: >-
   用於確認既有程式、diff、workflow、log 或測試輸出是否支持一項工程 finding；輸出
   confirmed、rejected 或 unverified 的來源引文結果，不提出設計方案也不修改程式。
 version: >-
-  1.0.0
+  1.1.0
 tags:
   - workflow
   - review
@@ -57,16 +57,51 @@ collab review \
 ```
 
 用使用者的語言寫 `--prompt`，用 `--hard-ac` 限定可驗證的完成條件。真實 run 不加
-`--fake`；測試／示範才加。此指令是一次性、bounded 查核，沒有 `collab run` 的
-watcher、dashboard、Judge 或使用者 decision card。
+`--fake`；測試／示範才加。
 
-### 4. 解讀與交付
+`collab review` 現在跟 `collab run` 走同一個 Engine：指令會印出 `run <run_id>
+started`，在背景推進到收斂或卡住為止才回傳（單次呼叫仍會等到底，但過程走
+checkpoint/journal，可中斷恢復，不是不可觀測的黑箱）。分歧的 finding 由 AI 自己走
+Rebuttal → Judge-lite 裁到底，只有雙方 judge 真的分不出優劣（no-dominance）才會停在
+`awaiting_user_decision` 等你決定；指令結束時若停在那裡，CLI 會印出待答的 `card_id`
+與兩個選項 (`confirmed`/`rejected`)。
 
-讀取 CLI 回報的 JSON report，逐項以白話交付：
+### 4. 若停在 no-dominance，回答後才算完成
+
+```bash
+collab answer <run_id> <card_id> --choice confirmed   # 或 rejected
+```
+
+其餘場景可用既有的 run 管理指令查詢／恢復同一個 run（不需要另開一套指令）：
+
+```bash
+collab status <run_id> --data-dir ~/.collab-orchestrator
+collab report <run_id> --format json --data-dir ~/.collab-orchestrator
+collab continue-run <run_id>   # 進程中斷後、在背景worker/dashboard重啟時繼續推進
+collab resume <run_id>         # 從 paused_* 狀態恢復（例如模型逾時）
+collab calls <run_id>          # 逐筆檢視每次模型呼叫的 journal 狀態
+collab ui                      # dashboard 能看到 review run 的進度與待答卡片
+```
+
+`collab report <run_id>` 對 review run 只支援 `--format json`（md/html 是
+`collab design` 報告的格式）；review 的報告一律是這份三態 JSON。
+
+### 5. 解讀與交付
+
+讀取 CLI 回報（或 `collab report --format json`）的 JSON report，逐項以白話交付：
 
 - **confirmed**：原始 evidence 支持這個具體 claim；不等於已修好，也不等於優先級已定。
-- **rejected**：現有 evidence 不支持 claim；不要把它描述成 bug。
-- **unverified**：目前無法可靠確認；列出需要補哪一份 evidence。
+  可能是 AI 自己驗證出來，也可能是 no-dominance 後你選的。
+- **rejected**：現有 evidence 不支持 claim；不要把它描述成 bug。同樣可能來自 AI 自行
+  裁決，或你在 no-dominance 卡片上的選擇。
+- **unverified**：保留給「查無 evidence 佐證」的情況（例如模型工具故障、報不出可定位
+  的引文）——這不是「AI 吵不出結果」，那種情況會走 no-dominance 卡片，不會標
+  unverified。
+
+每個 finding 除了三態結果，report 裡多了一個 `convergence` 欄位，記錄它是否被
+verifier 質疑過、rebuttal 站不站得住、judge-lite 兩個判官的裁決理由，或使用者卡片的
+選擇——交付時可以引用這段說明「為什麼」，不只是給結論。頂層還有 `convergence_summary`
+統計整批 finding 各自走到哪一步。
 
 每個 confirmed finding 都交代來源檔、行號、影響與下一步。若使用者明確要求修改，才交給
 正常開發流程與真實測試；修改後可再次呼叫本 skill 驗證。若已確認事實但有多種合理修法，
@@ -74,15 +109,20 @@ watcher、dashboard、Judge 或使用者 decision card。
 
 ## Gotchas
 
-- `collab review` 是證據查核，不是設計收斂；它不會自行提案、revision、Judge 或改程式。
+- `collab review` 是證據查核，不是設計收斂；它不會自行提案、開放式 revision，也不會
+  改程式——這點沒變。變的是「分歧怎麼收斂」：現在有 Rebuttal → Judge-lite 兩個模型
+  自己裁到底，design 既有的 no-dominance 判準原班重用，只是判斷式改成二元
+  confirmed/rejected，不是 design 那種開放式方案優劣。
 - 每個 evidence 檔必須是 UTF-8 且不超過 1 MB；單次 pass 上限為 512 KiB。只有一份
   diff-shaped evidence 可自動按 `diff --git` file section 切分，其他過大或多個過大來源要
   先由人分批。
 - finding 的 `evidence_source_id` 必須由模型明確聲明並能在該來源定位；相同文字出現在
   其他檔案不會被拿來補救，這是 fail-closed 設計。
-- 這是單次 CLI 呼叫，沒有 `collab run` 的 call journal／crash-resume 保證；遇到中斷，先看
-  已寫出的 report，再決定是否重跑。
+- 現在有 run_id、checkpoint/journal 與 crash-resume：中斷後用 `collab status`/`collab
+  calls` 檢查進度，`collab continue-run`／`collab resume` 接著跑，不需要整個重跑。
 - 不要因為結果是 confirmed 就直接修改；「是否修、怎麼修」仍由使用者或正常開發流程決定。
+- 停在 `awaiting_user_decision` 不代表查核失敗——那是 AI 真的分不出優劣，才刻意保留給你
+  拍板；answer 完才會落地成三態之一並產出最終 report。
 
 ## 參考（漸進揭露）
 

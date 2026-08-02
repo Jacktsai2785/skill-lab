@@ -17,6 +17,7 @@ chmod +x "$SRC/pre-commit" "$SRC/pre-push"
 
 git config --global core.hooksPath "$HOME/.githooks"
 
-echo "✓ 已安裝:所有 repo 的 commit / push 都會先跑 /code-review xhigh"
+echo "✓ 已安裝：所有 repo 的 commit / push 都會先跑隔離的 /code-review xhigh"
+echo "  pre-commit 最少 300 秒；pre-push 每個 ref 最少 900 秒；只快取完整相同上下文的 PASS"
 echo "  跳過單次:SKIP_REVIEW=1 <git 指令> 或 --no-verify"
 echo "  完全移除:git config --global --unset core.hooksPath"

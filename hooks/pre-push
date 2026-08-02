@@ -24,7 +24,10 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   n=$(git rev-list --count "$base..$local_sha" 2>/dev/null || echo "?")
   echo "📤 pre-push:$remote_ref ← $n 個 commit ($(git rev-parse --short "$base")..$(git rev-parse --short "$local_sha"))"
 
-  if ! review_gate "本次審查即將推送的 commit range:git diff $base $local_sha(commit 列表見 git log $base..$local_sha)。working tree 的其他變更一律忽略"; then
+  base_tree="$(git rev-parse "$base^{tree}" 2>/dev/null)" || continue
+  target_tree="$(git rev-parse "$local_sha^{tree}" 2>/dev/null)" || continue
+  if ! review_gate pre-push "$base_tree" "$target_tree" \
+    "本次審查即將推送的 commit range；working tree 的其他變更一律忽略"; then
     echo "❌ code review 未通過 — push 已擋下。"
     echo "   修正後重試;或 SKIP_REVIEW=1 git push …/ git push --no-verify 強行通過。"
     exit 1
