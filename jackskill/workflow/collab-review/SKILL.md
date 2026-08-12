@@ -63,7 +63,9 @@ collab review \
 不走 checkpoint/journal，沒有 no-dominance／`awaiting_user_decision`／`collab
 answer` 這套機制（那是 design 才有的收斂流程）。呼叫會等到 Claude 與 Codex 各自
 查完（含逐 finding 的交叉驗證）才回傳，report 直接寫入
-`<data_dir>/reports/review-<id>.json`，指令本身會印出報告路徑與統計摘要。
+`<data_dir>/reports/<review_id>.json`（`review_id` 本身就是 `review-<8位hex>` 這種
+格式，例如 `review-a1b2c3d4`，所以檔案是 `review-a1b2c3d4.json`），指令本身會印出
+報告路徑與統計摘要。
 
 `--timeout-per-call-seconds` 是每次模型呼叫的逾時上限，預設 600 秒；大型 evidence
 可調高（例如 900）。任一 evidence pass 裡有 reviewer 逾時或失敗，report 的頂層
@@ -73,8 +75,8 @@ answer` 這套機制（那是 design 才有的收斂流程）。呼叫會等到 
 
 ### 4. 解讀與交付
 
-讀取 CLI 印出的 JSON report（`<data_dir>/reports/review-<id>.json`），逐項以白話
-交付。每個 finding 有 `verification`（confirmed/rejected/unverified）、
+讀取 CLI 印出的 JSON report（`<data_dir>/reports/<review_id>.json`，見上一節的檔名
+格式），逐項以白話交付。每個 finding 有 `verification`（confirmed/rejected/unverified）、
 `verified_by`（哪個模型下的判斷）、`verification_reason`：
 
 - **confirmed**：原始 evidence 支持這個具體 claim；不等於已修好，也不等於優先級已定。
@@ -107,8 +109,8 @@ confirmed/rejected 的數字。
 - 不要因為結果是 confirmed 就直接修改；「是否修、怎麼修」仍由使用者或正常開發流程決定。
 - 任一 evidence pass 有 reviewer 逾時／失敗時，report 的 `status` 會是
   `"incomplete"` 且 CLI 回傳非零 exit code——這不是查核失敗，是刻意 fail-closed，
-  避免把單邊結果當成完整雙腦查核交付；重跑該 pass 或提高
-  `--timeout-per-call-seconds` 後再試。
+  避免把單邊結果當成完整雙腦查核交付；沒有單 pass 重跑機制，只能提高
+  `--timeout-per-call-seconds` 後重跑整個 `collab review` 呼叫。
 
 ## 參考（漸進揭露）
 

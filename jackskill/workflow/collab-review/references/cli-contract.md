@@ -28,7 +28,10 @@ with a higher timeout) to get a complete result.
 ## Output
 
 The command writes `<review_id>.json` under `<data_dir>/reports/` (default
-`~/.collab-orchestrator/reports/`) and prints that path. There is no `collab report` re-render
+`~/.collab-orchestrator/reports/`) and prints that path. `review_id` is itself formatted
+`review-<8-char hex>` (e.g. `review-a1b2c3d4`), so the file on disk is e.g.
+`review-a1b2c3d4.json` — there is no separate `review-` prefix layered on top of the id.
+There is no `collab report` re-render
 for review — read the JSON file directly. Each finding carries the three-state fields:
 `verification` (`confirmed`/`rejected`/`unverified`), `verified_by`, `verification_reason`,
 `evidence` (`source_id`, `source_path`, `start_line`, `end_line`):
