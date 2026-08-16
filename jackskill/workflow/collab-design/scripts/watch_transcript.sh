@@ -72,7 +72,12 @@ for i in $(seq 1 120); do
     continue
   fi
   if echo "$STATUS_LINE" | grep -qE "completed|cancelled|escalated|failed"; then
-    echo "reached a stopping state, doing one final regen and opening the run dashboard"
+    echo "reached a stopping state, generating the durable report and final handoff"
+    # The live transcript links to this sibling file. Generate it before the
+    # final render so the primary completion action never points at a missing
+    # report. Dashboard/browser notifications remain a best-effort extra.
+    "$COLLAB_BIN" report "$RUN_ID" --format html >/dev/null 2>&1 || \
+      echo "warning: final report generation failed for $RUN_ID" >&2
     render
     # A completed run should be as visible as a pending decision.  The
     # dashboard uses a browser notification (when the user has granted it)
