@@ -104,11 +104,17 @@ python ~/.claude/skills/tw-company-identify/scripts/identify.py --text "..." --n
     }
   ],
   "excluded": [{"name": "某某有限公司"}],
-  "uncertain": [{"name": "某某創新"}]
+  "uncertain": [{"name": "某某創新"}],
+  "candidates": [{"query": "某某股份有限公司", "hits": [{"name": "...", "tax_id": "...", "address": "...", "capital": 0}]}]
 }
 ```
 
 `--no-enrich` 模式下 `valid` 陣列每筆只有 `name`，無 GCIS 欄位。
+
+額外欄位：
+- `candidates`：名稱搜尋**沒有完全相符**的公司時（即使只命中一家）不會自動採用，改列在這裡請人確認後用 `--tax-id` 重查。
+- `valid[].warnings`：查詢失敗的紀錄（例如經濟部 API 回 403）。有這個欄位時，空白或 0 的欄位是「查詢失敗」，不是「查無資料」。
+- `listing_status` 為 `未知`：上市櫃資料載入失敗，無法判斷是否公開發行，不等於 `非公發`。
 
 ## Reference
 
@@ -127,9 +133,16 @@ python ~/.claude/skills/tw-company-identify/scripts/identify.py --text "..." --n
 |------|------|
 | g0v API 503 / timeout | 自動 fallback 到 GCIS App1（by tax_id），但 GCIS 不含董監事；若都失敗，回傳空 enrich 欄位（`tax_id=""`）|
 | 上市狀態總是「非公發」 | 24h cache 可能還沒載入；首次呼叫會花約 5–10 秒下載 TWSE/TPEX/GISA 資料 |
+| 上市狀態是「未知」 | TWSE/TPEX/GISA 其中一個來源載入失敗（stderr 有 `listing source ... failed`）。cache 只保留 5 分鐘，之後會自動重試 |
+| 輸出的 `warnings` 有 g0v 或 GCIS 失敗 | 該 API 擋掉連線或暫時故障（例如 `HTTP 403`、`HTTP 503`）。用 `curl` 對同一網址確認；整批都失敗時結果不可採用。**沒有** `warnings` 時，空欄位才是「查無資料」（查無此統編本身不算失敗） |
+| 輸入文字很長 | 超過 8000 字會分段送 LLM 再合併去重（stderr 有 `reading it in N chunks`）。超過 10 段（8 萬字）會**直接報錯結束**，不會只讀前半段，請把輸入拆開分次執行。分段若剛好切在公司名中間可能漏抽 |
+| `Error: could not resolve tax id ...` | `--tax-id` 查不到公司：統編不存在，或 g0v 與 GCIS 都失敗。看 stderr 有沒有 `lookup failed` 的警告區分兩者。若同時給 `--name`，會以該名稱繼續 |
+| `Error: LLM output was cut off at max_tokens` | 輸入太密、模型輸出被截斷，公司清單不完整。縮短輸入再跑 |
+| `Error: LLM reply ... not a valid JSON array` / `no closing ']'` | 模型回覆格式壞掉或被截斷（CLI 模式沒有 max_tokens 訊號，靠這個偵測）。不會再當成「0 家公司」；重跑或縮短輸入。模型若只回純文字且沒有 `[`（例如「找不到公司」），視為 0 家 |
+| 給了統編但名稱對不上 | 以你給的統編為準：先在搜尋結果找該統編，找不到就直接用統編查，不會被名稱相同但統編不同的公司蓋掉 |
 | 圖片抽取無結果 | 確認圖片含可辨識的中文公司名；測試時可先用 `--text` 把圖片中的字貼進來檢查 |
 | `tax_id` 看起來不像 8 碼數字 | 抽取階段已跳過，但若呼叫端傳了非 8 碼到 `--tax-id`，會直接回空 |
-| `claude` CLI fallback 失敗 | 改設 `ANTHROPIC_API_KEY` 走 SDK；CLI 模式對長輸入較不穩定 |
+| `claude` CLI fallback 失敗 | 程式會印 `Error: claude CLI exited N: ...` 並以代碼 1 結束（不會再當成「0 家公司」）。常見原因是 CLI 未登入；或改設 `ANTHROPIC_API_KEY` 走 SDK |
 | 抓到非公司名（人名、地址）| Prompt 已強調「只抓公司或機構名稱」，但偶有誤判；呼叫端可自行對 `valid`/`uncertain` 做二次過濾 |
 
 ## Notes
