@@ -3,7 +3,7 @@
 我（Jack）自己原創的 Claude Code skill 開發庫，與 `rivendell`（朋友的 repo）獨立。
 透過 `deploy.sh` symlink 進 `~/.claude/skills/`，所有專案全域可用。
 
-## Skills（22）
+## Skills（23）
 
 ### workflow/
 | Skill | 說明 |
@@ -27,6 +27,7 @@
 | `project-redteam-review` | 全專案盤點＋code↔文檔驗證＋三紅隊並行審查＋彙整最佳設計（可選套用） |
 | `tw-call-memo` | 台灣企業訪談逐字稿轉投資研究 memo |
 | `tw-company-identify` | 台灣公司名稱、統編與別名辨識 |
+| `tw-company-site-audit` | 批次檢查台灣公司官網並分類失效原因（缺 https／網域消失／憑證過期），再查登記現況判斷是否已解散 |
 
 ### meta/
 | Skill | 說明 |
