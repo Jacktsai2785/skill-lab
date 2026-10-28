@@ -6,8 +6,10 @@
 
 | 用途 | URL |
 |------|-----|
-| 名稱搜尋 | `https://company.g0v.ronny.tw/api/search?q={name}` |
-| 統編查詢 | `https://company.g0v.ronny.tw/api/id/{tax_id}` |
+| 名稱搜尋（只比對**公司名稱**） | `https://company.g0v.ronny.tw/api/search?q={name}` |
+| 人名搜尋（比對**負責人／董監事姓名**） | `https://company.g0v.ronny.tw/api/name?q={person}&page=1` |
+| 統編查完整資料 | `https://company.g0v.ronny.tw/api/show/{tax_id}` |
+| 統編查詢（舊，已失效） | `https://company.g0v.ronny.tw/api/id/{tax_id}` — 2026-10-28 實測 **HTTP 200 但內容只有 `404` 三個字**（`text/html`），狀態碼看起來成功，`raise_for_status()` 不會報錯，要到解析 JSON 才出錯。已改用 `/api/show/` |
 
 **回應重點欄位（來自 `data` 物件 / `data` 陣列）：**
 
@@ -27,6 +29,10 @@
 - `所代表法人` 為 `[統編, 公司名稱]` 二元陣列，或空字串。
 - 出資比例用 `出資額 / 已發行股份總數` 計算（精度建議 6 位小數）。
 - 名稱搜尋可能多筆命中；優先取 `公司名稱` 完全相符者，否則第一筆。
+- **`/api/search` 只比對公司名稱，不比對人名。** 想用創辦人／負責人反查公司，要用 `/api/name?q={姓名}`（回傳 `found` 筆數與 `data` 陣列）。用 `/api/search` 查人名永遠是 0 筆，不代表查無此人。
+- **品牌名不等於登記名**（例：品牌 Kitchen Lab，法人為「伽立略餐飲企業股份有限公司」）。用品牌名查到 0 筆時，改用創辦人姓名走 `/api/name`，再用專訪原文或官網交叉比對；比對而得的對應不是官方標註，呈現時要註明。
+- **登記現況欄位可能是空的**（例：寬泰食品的 `登記現況` 為 `None`，但 GCIS 顯示「核准設立」）。判斷公司是否仍存續時，不能只看 g0v 的現況欄，要用統編到 GCIS 交叉確認，欄位為 `Company_Status_Desc`。
+- 官網打不開（網域消失、憑證過期）時，**先查登記現況**再找替代網址：明谷農業生技、探索水產科技就是官網失效而公司已解散。
 - API 偶爾 503，必須有 fallback。
 - 無 rate limit 文件；建議 timeout 15 秒、總體 20 秒。
 
@@ -55,9 +61,13 @@ OData 介面，僅 by 統編查詢可靠。
 | `Paid_In_Capital_Amount` | 實收資本額 |
 | `Capital_Stock_Amount` | 章程資本額 (authorized capital) |
 | `Company_Location` | 公司地址 |
+| `Company_Status_Desc` | 登記現況（`核准設立`、`解散` 等）。解散的公司仍查得到 |
+| `Company_Setup_Date` / `Change_Of_Approval_Data` | 設立日／最後核准變更日（民國 `YYYMMDD`，如 `1021004`） |
 
 **特殊注意：**
 
+- **連線身分會被擋：** Python `urllib` 預設連線對這個 API 回 `403`，同一網址用 `curl` 回 `200`（2026-10-28 實測）。批次查詢時若整批都是 403，是連線方式問題，不是公司有異常，結果不能採用。`httpx`（本 skill 腳本使用）未實測。
+- **dataset 不要混用：** `5F64D864…` 是公司基本資料，`6BBA2268…` 是董監事。拿董監事的 dataset 查公司名稱會得到空結果，不代表查無此公司。
 - g0v 沒有 `authorized_capital`（章程資本），需從 GCIS 補齊。
 - GCIS 不含董監事於 App1，須另呼叫董監事 API。
 - 大型整批查詢請降頻，避免被拒絕服務。

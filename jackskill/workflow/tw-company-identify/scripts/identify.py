@@ -27,7 +27,7 @@ log = logging.getLogger("tw-company-identify")
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 RONNY_SEARCH = "https://company.g0v.ronny.tw/api/search"
-RONNY_BY_ID = "https://company.g0v.ronny.tw/api/id/{tax_id}"
+RONNY_BY_ID = "https://company.g0v.ronny.tw/api/show/{tax_id}"
 GCIS_APP1 = (
     "https://data.gcis.nat.gov.tw/od/data/api/"
     "5F64D864-61CB-4D0D-8AD9-492047CC1EA6"
